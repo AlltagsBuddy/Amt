@@ -59,7 +59,20 @@ def get_amtsadresse(plz, amt):
         best = data["results"][0]
         name = best.get("name", "[Unbekanntes Amt]")
         adresse = best.get("formatted_address", "")
-        return f"{name}, {adresse}"
+        maps_url = f"https://www.google.com/maps/search/?api=1&query={requests.utils.quote(adresse)}"
+
+        # Formatierte Adresse in separate Zeilen aufteilen
+        parts = adresse.split(",")
+        formatted = f"{name}\n"
+        if len(parts) >= 1:
+            formatted += parts[0].strip() + "\n"
+        if len(parts) >= 2:
+            formatted += parts[1].strip() + "\n"
+        if len(parts) >= 3:
+            formatted += parts[2].strip()
+
+        formatted += f"\n(🗺️ Google Maps: {maps_url})"
+        return formatted.strip()
 
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
@@ -130,4 +143,5 @@ def export_docx():
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=10000)
+
