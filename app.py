@@ -8,6 +8,10 @@ import os
 import re
 from math import radians, cos, sin, asin, sqrt
 
+from dotenv import load_dotenv
+load_dotenv()
+
+
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
