@@ -8,6 +8,18 @@ import os
 import re
 from math import radians, cos, sin, asin, sqrt
 
+from flask import Flask, render_template
+
+app = Flask(__name__, template_folder='templates')
+
+@app.route('/')
+def serve_form():
+    return render_template('amt.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
 app = Flask(__name__)
 
 from flask import Flask
