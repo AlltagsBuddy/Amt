@@ -6,55 +6,21 @@ from fpdf import FPDF
 import requests
 import os
 import re
-from math import radians, cos, sin, asin, sqrt
+from dotenv import load_dotenv
 
-from flask import Flask, render_template
-
-app = Flask(__name__, template_folder='templates')
-
-@app.route('/')
-def serve_form():
-    return render_template('amt.html')
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0')
-
-
-
-app = Flask(__name__)
-
-from flask import Flask
-import os
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return 'Hello from AlltagsBuddy Amt!'
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
-
-
-import os
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
-
+load_dotenv()  # .env laden
 
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
-GOOGLE_API_KEY = "AIzaSyC1Gg9ssxPiPIePY0M3MT_BxOjzyjHQ3zQ"  # Ersetze durch deinen echten API Key
+# 🔐 Google API Key aus .env
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 @app.route('/')
 def serve_html():
     return render_template('amt.html')
 
 # 📍 Hole Koordinaten zur PLZ
-
 def get_coords_from_plz(plz):
     try:
         res = requests.get("https://nominatim.openstreetmap.org/search", params={
@@ -71,7 +37,6 @@ def get_coords_from_plz(plz):
         return None, None
 
 # 📌 Google Places Suche nach nächstem Amt
-
 def get_amtsadresse(plz, amt):
     lat, lon = get_coords_from_plz(plz)
     if not lat or not lon:
@@ -101,7 +66,6 @@ def get_amtsadresse(plz, amt):
         return f"[Fehler bei der Google-Suche: {str(e)}]"
 
 # 📝 Schreiben generieren
-
 def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
     stil = {
         "neutral": "Sehr geehrte Damen und Herren,",
@@ -111,7 +75,6 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
 
     plz_match = re.search(r'(\d{5})', adresse)
     plz = plz_match.group(1) if plz_match else ''
-
     amtsadresse = get_amtsadresse(plz, behoerde)
 
     absenderblock = f"{name}\n{adresse}\nKundennummer: {kundennummer}\n"
@@ -165,6 +128,7 @@ def export_docx():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
-
-    
-    
+# 🌐 App starten
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
