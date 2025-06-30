@@ -17,7 +17,8 @@ def serve_form():
     return render_template('amt.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0')
+
 
 
 app = Flask(__name__)
