@@ -8,6 +8,9 @@ import os
 import re
 from math import radians, cos, sin, asin, sqrt
 
+app = Flask(__name__)
+
+
 import os
 
 if __name__ == '__main__':
