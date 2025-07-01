@@ -16,7 +16,7 @@ CORS(app)
 
 # 🔐 API Keys aus lokaler .env
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # optional, z. B. für spätere Nutzung
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # optional für spätere Features
 
 @app.route('/')
 def serve_html():
@@ -38,24 +38,29 @@ def get_coords_from_plz(plz):
     except:
         return None, None
 
-# 📌 Suche nächstes Amt via Google Places
+# 📌 Google Places Suche nach nächstem Amt
 def get_amtsadresse(plz, amt):
     lat, lon = get_coords_from_plz(plz)
     if not lat or not lon:
         return "[Ort zur PLZ nicht gefunden]"
 
     try:
+        suchbegriff = f"{amt} {plz} Germany"
         url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
         params = {
-            "query": f"{amt} in Deutschland",
+            "query": suchbegriff,
             "location": f"{lat},{lon}",
-            "radius": 30000,
+            "radius": 50000,
             "region": "de",
             "language": "de",
             "key": GOOGLE_API_KEY
         }
         res = requests.get(url, params=params)
         data = res.json()
+
+        if "error_message" in data:
+            return f"[Google API Fehler: {data['error_message']}]"
+
         if not data.get("results"):
             return "[Keine passende Behörde gefunden]"
 
