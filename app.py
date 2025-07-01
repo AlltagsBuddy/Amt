@@ -8,13 +8,15 @@ import os
 import re
 from dotenv import load_dotenv
 
-load_dotenv()  # .env laden
+# 🔐 Lokale .env laden (nur lokal vorhanden!)
+load_dotenv()
 
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
-# 🔐 Google API Key aus .env
+# 🔐 API Keys aus lokaler .env
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # optional, z. B. für spätere Nutzung
 
 @app.route('/')
 def serve_html():
@@ -36,7 +38,7 @@ def get_coords_from_plz(plz):
     except:
         return None, None
 
-# 📌 Google Places Suche nach nächstem Amt
+# 📌 Suche nächstes Amt via Google Places
 def get_amtsadresse(plz, amt):
     lat, lon = get_coords_from_plz(plz)
     if not lat or not lon:
@@ -45,7 +47,7 @@ def get_amtsadresse(plz, amt):
     try:
         url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
         params = {
-            "query": amt,
+            "query": f"{amt} in Deutschland",
             "location": f"{lat},{lon}",
             "radius": 30000,
             "region": "de",
@@ -89,6 +91,7 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
     )
     return text
 
+# 📤 API: Schreiben erzeugen
 @app.route('/api/generate', methods=['POST'])
 def generate():
     data = request.get_json()
@@ -103,6 +106,7 @@ def generate():
     )
     return jsonify({"brieftext": letter})
 
+# 📥 PDF Export
 @app.route('/api/export/pdf', methods=['POST'])
 def export_pdf():
     data = request.get_json()
@@ -117,6 +121,7 @@ def export_pdf():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.pdf", mimetype='application/pdf')
 
+# 📥 DOCX Export
 @app.route('/api/export/docx', methods=['POST'])
 def export_docx():
     data = request.get_json()
