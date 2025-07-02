@@ -78,7 +78,8 @@ def get_amtsadresse(plz, amt):
         best = data["results"][0]
         name = best.get("name", "[Unbekanntes Amt]")
         adresse = best.get("formatted_address", "")
-        return f"{name}, {adresse}"
+        maps_link = f"https://www.google.com/maps/search/?api=1&query={name.replace(' ', '+')}+{adresse.replace(' ', '+')}"
+        return f"{name}\n{adresse}\n{maps_link}"
 
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
@@ -95,7 +96,9 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
     plz = plz_match.group(1) if plz_match else ''
     amtsadresse = get_amtsadresse(plz, behoerde)
 
-    absenderblock = f"{name}\n{adresse}\nKundennummer: {kundennummer or '-'}"
+    absenderblock = f"{name}\n{adresse}"
+    if kundennummer:
+        absenderblock += f"\nKundennummer: {kundennummer}"
 
     brieftext = (
         f"{absenderblock}\n\n"
@@ -118,7 +121,7 @@ def generate():
         data.get('details', ''),
         data.get('name', '[Dein Name]'),
         data.get('adresse', '[Deine Adresse]'),
-        data.get('kundennummer', '-')
+        data.get('kundennummer', '')
     )
     return jsonify({"brieftext": letter})
 

@@ -52,10 +52,6 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    h1 {
-      text-align: center;
-      color: #FF6B00;
-    }
     label {
       display: block;
       margin-top: 15px;
@@ -72,6 +68,9 @@
       font-size: 1rem;
       box-sizing: border-box;
     }
+    .hidden {
+      display: none;
+    }
     button {
       width: 100%;
       background-color: #FF6B00;
@@ -84,10 +83,6 @@
       border-radius: 8px;
       font-size: 1rem;
     }
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
     .output {
       margin-top: 30px;
       background-color: #f4f4f4;
@@ -95,192 +90,200 @@
       border-radius: 8px;
       white-space: pre-wrap;
     }
-    #status {
-      margin-top: 15px;
-      font-weight: bold;
-      text-align: center;
-    }
     footer {
       text-align: center;
       padding: 30px;
       background-color: #1BC7C2;
       color: white;
     }
+    #status {
+      margin-top: 15px;
+      font-weight: bold;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div class="logo">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="AlltagsBuddy Logo" />
-      <span>AlltagsBuddy</span>
-    </div>
-    <a href="index.html" class="cta-button">Zurück zur Startseite</a>
-  </header>
+<header>
+  <div class="logo">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="AlltagsBuddy Logo" />
+    <span>AlltagsBuddy</span>
+  </div>
+  <a href="index.html" class="cta-button">Zurück zur Startseite</a>
+</header>
 
-  <main>
-    <h1>Amt-O-Mat – Der KI-Formulargenerator</h1>
-    <p style="text-align:center">
-      Erstelle automatisch offizielle Schreiben für dein Anliegen bei Ämtern & Behörden. Wähle einfach Behörde, Anlass, Tonfall und gib deine Daten ein.
-    </p>
+<main>
+  <h1>Amt-O-Mat – Der KI-Formulargenerator</h1>
+  <p style="text-align:center">
+    Erstelle automatisch offizielle Schreiben für dein Anliegen bei Ämtern & Behörden. Wähle einfach Behörde, Anlass, Tonfall und gib deine Daten ein.
+  </p>
 
-    <form id="formGenerator">
-      <label for="name">Dein Name</label>
-      <input type="text" id="name" placeholder="Max Mustermann" />
+  <form id="formGenerator">
+    <label for="name">Dein Name</label>
+    <input type="text" id="name" placeholder="Max Mustermann" required />
 
-      <label for="adresse">Deine Adresse</label>
-      <textarea id="adresse" rows="2" placeholder="Musterstraße 1, 12345 Musterstadt"></textarea>
+    <label for="adresse">Deine Adresse</label>
+    <textarea id="adresse" rows="2" placeholder="Musterstraße 1, 12345 Musterstadt" required></textarea>
 
-      <label for="kundennummer">Kundennummer (optional)</label>
-      <input type="text" id="kundennummer" />
+    <label for="kundennummer">Kundennummer (optional)</label>
+    <input type="text" id="kundennummer" />
 
-      <label for="behoerde">Behörde</label>
-      <select id="behoerde">
-        <option>Jobcenter</option>
-        <option>Bürgeramt</option>
-        <option>Agentur für Arbeit</option>
-        <option>Familienkasse</option>
-        <option>Stadtverwaltung</option>
-      </select>
+    <label for="behoerde">Behörde</label>
+    <select id="behoerde">
+      <option value="Jobcenter">Jobcenter</option>
+      <option value="Bürgeramt">Bürgeramt</option>
+      <option value="Agentur für Arbeit">Agentur für Arbeit</option>
+      <option value="Familienkasse">Familienkasse</option>
+      <option value="Stadtverwaltung">Stadtverwaltung</option>
+      <option value="Sonstiges">Sonstiges</option>
+    </select>
+    <input type="text" id="behoerde_custom" class="hidden" placeholder="Gib deine Behörde ein..." />
 
-      <label for="anliegen">Anliegen</label>
-      <select id="anliegen">
-        <option>Widerspruch</option>
-        <option>Antrag stellen</option>
-        <option>Nachweise senden</option>
-        <option>Kündigung</option>
-        <option>Rückmeldung / Nachfrage</option>
-      </select>
+    <label for="anliegen">Anliegen</label>
+    <select id="anliegen">
+      <option value="Widerspruch">Widerspruch</option>
+      <option value="Antrag stellen">Antrag stellen</option>
+      <option value="Nachweise senden">Nachweise senden</option>
+      <option value="Kündigung">Kündigung</option>
+      <option value="Rückmeldung / Nachfrage">Rückmeldung / Nachfrage</option>
+      <option value="Sonstiges">Sonstiges</option>
+    </select>
+    <input type="text" id="anliegen_custom" class="hidden" placeholder="Gib dein Anliegen ein..." />
 
-      <label for="tonfall">Tonfall</label>
-      <select id="tonfall">
-        <option value="neutral">Neutral</option>
-        <option value="freundlich">Freundlich-bestimmt</option>
-        <option value="formell">Förmlich</option>
-      </select>
+    <label for="tonfall">Tonfall</label>
+    <select id="tonfall">
+      <option value="neutral">Neutral</option>
+      <option value="freundlich">Freundlich-bestimmt</option>
+      <option value="formell">Förmlich</option>
+    </select>
 
-      <label for="details">Zusätzliche Angaben</label>
-      <textarea id="details" rows="5" placeholder="z. B. genaue Situation, gewünschter Ablauf, Fristen"></textarea>
+    <label for="details">Zusätzliche Angaben</label>
+    <textarea id="details" rows="5" placeholder="z. B. genaue Situation, gewünschter Ablauf, Fristen"></textarea>
 
-      <button id="generateBtn" type="submit">📄 Amtsschreiben generieren</button>
-    </form>
+    <button id="generateBtn" type="submit">📄 Amtsschreiben generieren</button>
+  </form>
 
-    <div id="status"></div>
-    <div id="output" class="output"></div>
+  <div id="status"></div>
+  <div id="output" class="output"></div>
+  <div id="export-buttons" style="display:none">
+    <button id="downloadPdfBtn">📥 PDF herunterladen</button>
+    <button id="downloadDocxBtn">📝 Word herunterladen</button>
+  </div>
+</main>
 
-    <div id="export-buttons" style="display:none">
-      <button id="downloadPdfBtn">📥 PDF herunterladen</button>
-      <button id="downloadDocxBtn">📝 Word herunterladen</button>
-    </div>
-  </main>
+<footer>
+  &copy; 2025 AlltagsBuddy – Dein smarter KI-Buddy für Behördenkram
+</footer>
 
-  <footer>
-    &copy; 2025 AlltagsBuddy – Dein smarter KI-Buddy für Behördenkram
-  </footer>
+<script>
+  const form = document.getElementById('formGenerator');
+  const status = document.getElementById('status');
+  const output = document.getElementById('output');
+  const exportBox = document.getElementById('export-buttons');
+  const generateBtn = document.getElementById('generateBtn');
+  const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+  const downloadDocxBtn = document.getElementById('downloadDocxBtn');
 
-  <script>
-    const form = document.getElementById('formGenerator');
-    const output = document.getElementById('output');
-    const status = document.getElementById('status');
-    const exportBox = document.getElementById('export-buttons');
-    const generateBtn = document.getElementById('generateBtn');
-    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-    const downloadDocxBtn = document.getElementById('downloadDocxBtn');
+  const behoerde = document.getElementById('behoerde');
+  const behoerde_custom = document.getElementById('behoerde_custom');
+  const anliegen = document.getElementById('anliegen');
+  const anliegen_custom = document.getElementById('anliegen_custom');
 
-    let result = { brieftext: '' };
+  behoerde.addEventListener('change', () => {
+    behoerde_custom.classList.toggle('hidden', behoerde.value !== 'Sonstiges');
+  });
 
-    function setStatus(msg, color = '#333') {
-      status.innerText = msg;
-      status.style.color = color;
+  anliegen.addEventListener('change', () => {
+    anliegen_custom.classList.toggle('hidden', anliegen.value !== 'Sonstiges');
+  });
+
+  function setStatus(msg, color = '#333') {
+    status.innerText = msg;
+    status.style.color = color;
+  }
+
+  function disableAll(disabled) {
+    generateBtn.disabled = disabled;
+    downloadPdfBtn.disabled = disabled;
+    downloadDocxBtn.disabled = disabled;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const inputData = {
+      name: document.getElementById('name').value.trim(),
+      adresse: document.getElementById('adresse').value.trim(),
+      kundennummer: document.getElementById('kundennummer').value.trim(),
+      behoerde: behoerde.value === 'Sonstiges' ? behoerde_custom.value.trim() : behoerde.value,
+      anliegen: anliegen.value === 'Sonstiges' ? anliegen_custom.value.trim() : anliegen.value,
+      tonfall: document.getElementById('tonfall').value,
+      details: document.getElementById('details').value.trim()
+    };
+
+    if (!inputData.name || !inputData.adresse) {
+      setStatus('⚠️ Bitte fülle Name und Adresse aus.', 'red');
+      return;
     }
 
-    function disableAll(disabled) {
-      generateBtn.disabled = disabled;
-      downloadPdfBtn.disabled = disabled;
-      downloadDocxBtn.disabled = disabled;
+    setStatus('⏳ Schreiben wird generiert...');
+    disableAll(true);
+
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inputData)
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      setStatus('❌ Fehler: ' + data.error, 'red');
+      disableAll(false);
+      return;
     }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+    result = data;
+    output.innerHTML = `<h3>Generiertes Schreiben:</h3><p>${data.brieftext.replace(/\n/g, '<br>')}</p>`;
+    setStatus('✅ Schreiben erfolgreich erstellt!', 'green');
+    exportBox.style.display = 'block';
+    disableAll(false);
+  });
 
-      const inputData = {
-        name: document.getElementById('name').value.trim(),
-        adresse: document.getElementById('adresse').value.trim(),
-        kundennummer: document.getElementById('kundennummer').value.trim(),
-        behoerde: document.getElementById('behoerde').value,
-        anliegen: document.getElementById('anliegen').value,
-        tonfall: document.getElementById('tonfall').value,
-        details: document.getElementById('details').value.trim()
-      };
-
-      if (!inputData.name || !inputData.adresse || !inputData.behoerde || !inputData.anliegen) {
-        setStatus('⚠️ Bitte fülle alle Pflichtfelder aus.', 'red');
-        return;
-      }
-
-      setStatus('⏳ Schreiben wird generiert...');
-      disableAll(true);
-
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inputData)
-      });
-
-      const data = await res.json();
-      if (data.error) {
-        setStatus('❌ Fehler: ' + data.error, 'red');
-        disableAll(false);
-        return;
-      }
-
-      if (!data.brieftext || data.brieftext.trim().length < 5) {
-        setStatus('⚠️ Es wurde kein brauchbares Schreiben erstellt.', 'red');
-        disableAll(false);
-        return;
-      }
-
-      result = data;
-      output.innerHTML = `<h3>Generiertes Schreiben:</h3><p>${data.brieftext.replace(/\n/g, '<br>')}</p>`;
-      setStatus('✅ Schreiben erfolgreich erstellt!', 'green');
-      exportBox.style.display = 'block';
-      disableAll(false);
+  downloadPdfBtn.addEventListener('click', async () => {
+    setStatus('📄 PDF wird erstellt...');
+    disableAll(true);
+    const res = await fetch('/api/export/pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(result)
     });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'amtsschreiben.pdf';
+    a.click();
+    setStatus('✅ PDF wurde heruntergeladen', 'green');
+    disableAll(false);
+  });
 
-    downloadPdfBtn.addEventListener('click', async () => {
-      setStatus('📄 PDF wird erstellt...');
-      disableAll(true);
-      const res = await fetch('/api/export/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result)
-      });
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'amtsschreiben.pdf';
-      a.click();
-      setStatus('✅ PDF wurde heruntergeladen', 'green');
-      disableAll(false);
+  downloadDocxBtn.addEventListener('click', async () => {
+    setStatus('📝 Word wird erstellt...');
+    disableAll(true);
+    const res = await fetch('/api/export/docx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(result)
     });
-
-    downloadDocxBtn.addEventListener('click', async () => {
-      setStatus('📝 Word wird erstellt...');
-      disableAll(true);
-      const res = await fetch('/api/export/docx', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result)
-      });
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'amtsschreiben.docx';
-      a.click();
-      setStatus('✅ Word-Datei wurde heruntergeladen', 'green');
-      disableAll(false);
-    });
-  </script>
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'amtsschreiben.docx';
+    a.click();
+    setStatus('✅ Word-Datei wurde heruntergeladen', 'green');
+    disableAll(false);
+  });
+</script>
 </body>
 </html>
