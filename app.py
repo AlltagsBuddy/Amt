@@ -20,7 +20,6 @@ def serve_html():
     return render_template('amt.html')
 
 # Koordinaten via OpenStreetMap
-
 def get_coords_from_plz(plz):
     try:
         res = requests.get("https://nominatim.openstreetmap.org/search", params={
