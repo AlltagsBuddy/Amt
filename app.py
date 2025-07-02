@@ -8,28 +8,29 @@ import os
 import re
 from dotenv import load_dotenv
 
-# 🔐 .env laden (lokal vorhanden)
+# 🔐 .env laden (lokal)
 load_dotenv()
 
+# 🌍 Flask-App einrichten
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
-# 🔐 API-Keys aus Umgebungsvariablen
+# 🔐 API Keys aus Umgebungsvariablen
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # optional für spätere Features
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # optional
 
-# Debug-Ausgabe
+# 🧪 Debug-Ausgabe beim Start
 if not GOOGLE_API_KEY:
     print("❌ GOOGLE_API_KEY wurde nicht gefunden!")
 else:
     print("✅ GOOGLE_API_KEY ist gesetzt.")
 
+# 🌐 HTML-Frontend ausliefern
 @app.route('/')
 def serve_html():
     return render_template('amt.html')
 
-
-# 📍 Hole Koordinaten zur PLZ via OpenStreetMap
+# 📍 Hole Koordinaten zur PLZ über Nominatim (OpenStreetMap)
 def get_coords_from_plz(plz):
     try:
         res = requests.get("https://nominatim.openstreetmap.org/search", params={
@@ -43,11 +44,10 @@ def get_coords_from_plz(plz):
             return None, None
         return data[0]["lat"], data[0]["lon"]
     except Exception as e:
-        print("PLZ-Koordinatenfehler:", e)
+        print("❌ Fehler beim Abrufen der Koordinaten:", e)
         return None, None
 
-
-# 📌 Suche nächstes Amt über Google Places API
+# 📌 Behördensuche via Google Places API
 def get_amtsadresse(plz, amt):
     if not GOOGLE_API_KEY:
         return "[Kein Google API Key verfügbar]"
@@ -72,7 +72,6 @@ def get_amtsadresse(plz, amt):
 
         if "error_message" in data:
             return f"[Google API Fehler: {data['error_message']}]"
-
         if not data.get("results"):
             return "[Keine passende Behörde gefunden]"
 
@@ -84,8 +83,7 @@ def get_amtsadresse(plz, amt):
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
 
-
-# 📝 Schreiben generieren
+# 📝 Brieftext generieren
 def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
     stil = {
         "neutral": "Sehr geehrte Damen und Herren,",
@@ -99,7 +97,7 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
 
     absenderblock = f"{name}\n{adresse}\nKundennummer: {kundennummer or '-'}"
 
-    text = (
+    brieftext = (
         f"{absenderblock}\n\n"
         f"An:\n{amtsadresse}\n\n"
         f"{stil}\n\n"
@@ -107,10 +105,9 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
         f"{details}\n\n"
         f"Ich danke Ihnen im Voraus für Ihre Bearbeitung.\n\nMit freundlichen Grüßen\n{name}"
     )
-    return text
+    return brieftext
 
-
-# 📤 Schreiben generieren
+# 📤 Schreiben generieren – API
 @app.route('/api/generate', methods=['POST'])
 def generate():
     data = request.get_json()
@@ -125,8 +122,7 @@ def generate():
     )
     return jsonify({"brieftext": letter})
 
-
-# 📥 PDF Export
+# 📥 PDF Download
 @app.route('/api/export/pdf', methods=['POST'])
 def export_pdf():
     data = request.get_json()
@@ -141,8 +137,7 @@ def export_pdf():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.pdf", mimetype='application/pdf')
 
-
-# 📥 DOCX Export
+# 📥 DOCX Download
 @app.route('/api/export/docx', methods=['POST'])
 def export_docx():
     data = request.get_json()
@@ -154,27 +149,23 @@ def export_docx():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
-
-# 🌐 Starten
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
-# 🔍 Diagnose-Endpunkt zur API-Funktion (optional, für Adminzwecke)
+# 🔍 Diagnose-Route zur API (optional)
 @app.route('/test-api')
 def test_google_api():
-    test_plz = "10115"  # Berlin
+    test_plz = "10115"
     test_behoerde = "Bürgeramt"
-
     try:
-        amtsadresse = get_amtsadresse(test_plz, test_behoerde)
+        ergebnis = get_amtsadresse(test_plz, test_behoerde)
         return jsonify({
             "status": "OK",
             "plz": test_plz,
             "behoerde": test_behoerde,
-            "ergebnis": amtsadresse
+            "adresse": ergebnis
         })
     except Exception as e:
-        return jsonify({
-            "status": "Fehler",
-            "meldung": str(e)
-        }), 500
+        return jsonify({"status": "Fehler", "meldung": str(e)}), 500
+
+# 🚀 Start
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
