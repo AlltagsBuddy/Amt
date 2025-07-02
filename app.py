@@ -75,12 +75,18 @@ def get_amtsadresse(plz, amt):
         return f"[Fehler bei der Google-Suche: {str(e)}]"
 
 # 📝 Schreiben generieren
-def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
+def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer, behoerde_custom, anliegen_custom):
     stil = {
         "neutral": "Sehr geehrte Damen und Herren,",
         "freundlich": "Guten Tag, ich hoffe, es geht Ihnen gut.",
         "formell": "Hiermit wende ich mich in förmlicher Weise an Sie."
     }.get(tonfall, "Sehr geehrte Damen und Herren,")
+
+    # Felder bei Sonstiges überschreiben
+    if behoerde == "Sonstiges" and behoerde_custom:
+        behoerde = behoerde_custom
+    if anliegen == "Sonstiges" and anliegen_custom:
+        anliegen = anliegen_custom
 
     # PLZ extrahieren
     plz_match = re.search(r'(\d{5})', adresse)
@@ -112,7 +118,9 @@ def generate():
         data.get('details', '').strip(),
         data.get('name', '[Dein Name]').strip(),
         data.get('adresse', '[Deine Adresse]').strip(),
-        data.get('kundennummer', '').strip()
+        data.get('kundennummer', '').strip(),
+        data.get('behoerde_custom', '').strip(),
+        data.get('anliegen_custom', '').strip()
     )
     return jsonify({"brieftext": letter})
 
