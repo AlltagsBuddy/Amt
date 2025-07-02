@@ -8,18 +8,29 @@ import os
 import re
 from dotenv import load_dotenv
 
+# 🔐 .env laden (lokal)
 load_dotenv()
 
+# 🌍 Flask-App einrichten
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
+# 🔐 API Keys aus Umgebungsvariablen
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # optional
 
+# 🧪 Debug-Ausgabe beim Start
+if not GOOGLE_API_KEY:
+    print("❌ GOOGLE_API_KEY wurde nicht gefunden!")
+else:
+    print("✅ GOOGLE_API_KEY ist gesetzt.")
+
+# 🌐 HTML-Frontend ausliefern
 @app.route('/')
 def serve_html():
     return render_template('amt.html')
 
+# 📍 Hole Koordinaten zur PLZ über Nominatim (OpenStreetMap)
 def get_coords_from_plz(plz):
     try:
         res = requests.get("https://nominatim.openstreetmap.org/search", params={
@@ -36,6 +47,7 @@ def get_coords_from_plz(plz):
         print("❌ Fehler beim Abrufen der Koordinaten:", e)
         return None, None
 
+# 📌 Behördensuche via Google Places API
 def get_amtsadresse(plz, amt):
     if not GOOGLE_API_KEY:
         return "[Kein Google API Key verfügbar]"
@@ -66,29 +78,35 @@ def get_amtsadresse(plz, amt):
         best = data["results"][0]
         name = best.get("name", "[Unbekanntes Amt]")
         adresse = best.get("formatted_address", "")
-        maps_link = f"https://www.google.com/maps/search/?api=1&query={adresse.replace(' ', '+')}"
-
-        return f"{name}\n{adresse}\n{maps_link}"
+        maps_url = f"https://www.google.com/maps/search/?api=1&query={adresse.replace(' ', '+')}"
+        return f"{name}\n{adresse}\n{maps_url}"
 
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
 
-def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
+# 📝 Brieftext generieren
+def generate_letter(behoerde, custom_behoerde, anliegen, custom_anliegen, tonfall, details, name, adresse, kundennummer):
     stil = {
         "neutral": "Sehr geehrte Damen und Herren,",
         "freundlich": "Guten Tag, ich hoffe, es geht Ihnen gut.",
         "formell": "Hiermit wende ich mich in förmlicher Weise an Sie."
     }.get(tonfall, "Sehr geehrte Damen und Herren,")
 
+    # Manuelle Felder bevorzugen, falls ausgefüllt
+    if behoerde == "Sonstiges" and custom_behoerde:
+        behoerde = custom_behoerde
+    if anliegen == "Sonstiges" and custom_anliegen:
+        anliegen = custom_anliegen
+
     plz_match = re.search(r'(\d{5})', adresse)
     plz = plz_match.group(1) if plz_match else ''
     amtsadresse = get_amtsadresse(plz, behoerde)
 
     absenderblock = f"{name}\n{adresse}"
-    if kundennummer.strip():
-        absenderblock += f"\nKundennummer: {kundennummer.strip()}"
+    if kundennummer:
+        absenderblock += f"\nKundennummer: {kundennummer}"
 
-    text = (
+    brieftext = (
         f"{absenderblock}\n\n"
         f"An:\n{amtsadresse}\n\n"
         f"{stil}\n\n"
@@ -96,14 +114,17 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
         f"{details}\n\n"
         f"Ich danke Ihnen im Voraus für Ihre Bearbeitung.\n\nMit freundlichen Grüßen\n{name}"
     )
-    return text
+    return brieftext
 
+# 📤 Schreiben generieren – API
 @app.route('/api/generate', methods=['POST'])
 def generate():
     data = request.get_json()
     letter = generate_letter(
         data.get('behoerde', ''),
+        data.get('custom_behoerde', ''),
         data.get('anliegen', ''),
+        data.get('custom_anliegen', ''),
         data.get('tonfall', ''),
         data.get('details', ''),
         data.get('name', '[Dein Name]'),
@@ -112,6 +133,7 @@ def generate():
     )
     return jsonify({"brieftext": letter})
 
+# 📥 PDF Download
 @app.route('/api/export/pdf', methods=['POST'])
 def export_pdf():
     data = request.get_json()
@@ -122,10 +144,11 @@ def export_pdf():
     for line in data.get("brieftext", "").split("\n"):
         pdf.multi_cell(0, 10, line)
     buffer = BytesIO()
-    pdf.output(buffer, 'F')
+    pdf.output(buffer)
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.pdf", mimetype='application/pdf')
 
+# 📥 DOCX Download
 @app.route('/api/export/docx', methods=['POST'])
 def export_docx():
     data = request.get_json()
@@ -137,6 +160,7 @@ def export_docx():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
+# 🔍 Diagnose-Route zur API (optional)
 @app.route('/test-api')
 def test_google_api():
     test_plz = "10115"
@@ -152,6 +176,7 @@ def test_google_api():
     except Exception as e:
         return jsonify({"status": "Fehler", "meldung": str(e)}), 500
 
+# 🚀 Start
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=False, host='0.0.0.0', port=port)
