@@ -7,25 +7,18 @@ import requests
 import os
 import re
 from dotenv import load_dotenv
-import openai
 
-# 🔐 .env laden (lokal)
 load_dotenv()
 
-# 🌍 Flask-App einrichten
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
-# 🔐 API Keys aus Umgebungsvariablen
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = OPENAI_API_KEY
 
 @app.route('/')
 def serve_html():
     return render_template('amt.html')
-
-# 📍 Koordinaten abrufen
 
 def get_coords_from_plz(plz):
     try:
@@ -39,10 +32,9 @@ def get_coords_from_plz(plz):
         if not data:
             return None, None
         return data[0]["lat"], data[0]["lon"]
-    except:
+    except Exception as e:
+        print("❌ Fehler beim Abrufen der Koordinaten:", e)
         return None, None
-
-# 📌 Google Places API verwenden
 
 def get_amtsadresse(plz, amt):
     if not GOOGLE_API_KEY:
@@ -75,12 +67,11 @@ def get_amtsadresse(plz, amt):
         name = best.get("name", "[Unbekanntes Amt]")
         adresse = best.get("formatted_address", "")
         maps_link = f"https://www.google.com/maps/search/?api=1&query={adresse.replace(' ', '+')}"
+
         return f"{name}\n{adresse}\n{maps_link}"
 
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
-
-# 📝 Schreiben generieren
 
 def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
     stil = {
@@ -94,8 +85,8 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
     amtsadresse = get_amtsadresse(plz, behoerde)
 
     absenderblock = f"{name}\n{adresse}"
-    if kundennummer:
-        absenderblock += f"\nKundennummer: {kundennummer}"
+    if kundennummer.strip():
+        absenderblock += f"\nKundennummer: {kundennummer.strip()}"
 
     text = (
         f"{absenderblock}\n\n"
@@ -106,8 +97,6 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
         f"Ich danke Ihnen im Voraus für Ihre Bearbeitung.\n\nMit freundlichen Grüßen\n{name}"
     )
     return text
-
-# 📤 Schreiben generieren
 
 @app.route('/api/generate', methods=['POST'])
 def generate():
@@ -123,8 +112,6 @@ def generate():
     )
     return jsonify({"brieftext": letter})
 
-# 📥 PDF Export
-
 @app.route('/api/export/pdf', methods=['POST'])
 def export_pdf():
     data = request.get_json()
@@ -135,11 +122,9 @@ def export_pdf():
     for line in data.get("brieftext", "").split("\n"):
         pdf.multi_cell(0, 10, line)
     buffer = BytesIO()
-    pdf.output(buffer)
+    pdf.output(buffer, 'F')
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.pdf", mimetype='application/pdf')
-
-# 📥 DOCX Export
 
 @app.route('/api/export/docx', methods=['POST'])
 def export_docx():
@@ -152,31 +137,21 @@ def export_docx():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
-# 🎤 Sprachtranskription via Whisper
-@app.route('/api/transcribe', methods=['POST'])
-def transcribe_audio():
-    if 'audio' not in request.files:
-        return jsonify({'error': 'Keine Audiodatei hochgeladen'}), 400
-
-    audio_file = request.files['audio']
-    try:
-        transcript = openai.Audio.transcribe("whisper-1", audio_file)
-        return jsonify({'text': transcript['text']})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# 🧪 Diagnose-Route
 @app.route('/test-api')
 def test_google_api():
     test_plz = "10115"
     test_behoerde = "Bürgeramt"
     try:
         ergebnis = get_amtsadresse(test_plz, test_behoerde)
-        return jsonify({"status": "OK", "adresse": ergebnis})
+        return jsonify({
+            "status": "OK",
+            "plz": test_plz,
+            "behoerde": test_behoerde,
+            "adresse": ergebnis
+        })
     except Exception as e:
         return jsonify({"status": "Fehler", "meldung": str(e)}), 500
 
-# 🚀 Starten
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=True, host='0.0.0.0', port=port)

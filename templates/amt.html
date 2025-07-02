@@ -61,6 +61,16 @@
       margin-top: 15px;
       font-weight: 600;
     }
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .input-group input[type="text"],
+    .input-group textarea,
+    .input-group select {
+      flex: 1;
+    }
     input[type="text"],
     textarea,
     select {
@@ -71,19 +81,6 @@
       border: 1px solid #ccc;
       font-size: 1rem;
       box-sizing: border-box;
-    }
-    .speech-btn {
-      background-color: #1BC7C2;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 5px;
-      margin-left: 10px;
-      cursor: pointer;
-    }
-    .field-group {
-      display: flex;
-      align-items: center;
     }
     button {
       width: 100%;
@@ -113,6 +110,28 @@
       font-weight: bold;
       text-align: center;
     }
+    .speech-btn {
+      padding: 10px;
+      font-size: 0.9rem;
+      height: 50px;
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      border-radius: 50%;
+      background-color: #1BC7C2;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .speech-btn:hover {
+      background-color: #19b3af;
+    }
+    .speech-hint {
+      font-size: 0.85rem;
+      text-align: center;
+      margin-top: 10px;
+      color: #888;
+    }
     footer {
       text-align: center;
       padding: 30px;
@@ -132,48 +151,79 @@
 
   <main>
     <h1>Amt-O-Mat – Der KI-Formulargenerator</h1>
+    <p style="text-align:center">
+      Erstelle automatisch offizielle Schreiben für dein Anliegen bei Ämtern & Behörden. Wähle einfach Behörde, Anlass, Tonfall und gib deine Daten ein.
+    </p>
+
     <form id="formGenerator">
       <label for="name">Dein Name</label>
-      <div class="field-group">
+      <div class="input-group">
         <input type="text" id="name" placeholder="Max Mustermann" />
-        <button type="button" class="speech-btn" onclick="startSpeech('name')">🎤</button>
+        <button type="button" class="speech-btn" onclick="startRecognition('name')">🎤</button>
       </div>
 
       <label for="adresse">Deine Adresse</label>
-      <div class="field-group">
-        <textarea id="adresse" rows="2" placeholder="Straße Hausnr, PLZ Ort"></textarea>
-        <button type="button" class="speech-btn" onclick="startSpeech('adresse')">🎤</button>
+      <div class="input-group">
+        <textarea id="adresse" rows="2" placeholder="Musterstraße 1, 12345 Musterstadt"></textarea>
+        <button type="button" class="speech-btn" onclick="startRecognition('adresse')">🎤</button>
       </div>
 
       <label for="kundennummer">Kundennummer (optional)</label>
-      <div class="field-group">
+      <div class="input-group">
         <input type="text" id="kundennummer" />
-        <button type="button" class="speech-btn" onclick="startSpeech('kundennummer')">🎤</button>
+        <button type="button" class="speech-btn" onclick="startRecognition('kundennummer')">🎤</button>
       </div>
 
       <label for="behoerde">Behörde</label>
-      <div class="field-group">
-        <input type="text" id="behoerde" placeholder="z. B. Jobcenter Bamberg" />
-        <button type="button" class="speech-btn" onclick="startSpeech('behoerde')">🎤</button>
+      <div class="input-group">
+        <select id="behoerde">
+          <option>Jobcenter</option>
+          <option>Bürgeramt</option>
+          <option>Agentur für Arbeit</option>
+          <option>Familienkasse</option>
+          <option>Stadtverwaltung</option>
+          <option value="Sonstiges">Sonstiges</option>
+        </select>
+        <button type="button" class="speech-btn" onclick="startRecognition('behoerde')">🎤</button>
+      </div>
+      <div id="behoerde-sonstig" style="display:none">
+        <input type="text" id="behoerde-sonstig-input" placeholder="Manuelle Eingabe der Behörde" />
       </div>
 
       <label for="anliegen">Anliegen</label>
-      <div class="field-group">
-        <input type="text" id="anliegen" placeholder="z. B. Antrag auf Leistungen, Widerspruch ..." />
-        <button type="button" class="speech-btn" onclick="startSpeech('anliegen')">🎤</button>
+      <div class="input-group">
+        <select id="anliegen">
+          <option>Widerspruch</option>
+          <option>Antrag stellen</option>
+          <option>Nachweise senden</option>
+          <option>Kündigung</option>
+          <option>Rückmeldung / Nachfrage</option>
+          <option value="Sonstiges">Sonstiges</option>
+        </select>
+        <button type="button" class="speech-btn" onclick="startRecognition('anliegen')">🎤</button>
+      </div>
+      <div id="anliegen-sonstig" style="display:none">
+        <input type="text" id="anliegen-sonstig-input" placeholder="Manuelle Eingabe des Anliegens" />
       </div>
 
       <label for="tonfall">Tonfall</label>
-      <select id="tonfall">
-        <option value="neutral">Neutral</option>
-        <option value="freundlich">Freundlich-bestimmt</option>
-        <option value="formell">Förmlich</option>
-      </select>
+      <div class="input-group">
+        <select id="tonfall">
+          <option value="neutral">Neutral</option>
+          <option value="freundlich">Freundlich-bestimmt</option>
+          <option value="formell">Förmlich</option>
+        </select>
+        <button type="button" class="speech-btn" onclick="startRecognition('tonfall')">🎤</button>
+      </div>
 
       <label for="details">Zusätzliche Angaben</label>
-      <div class="field-group">
+      <div class="input-group">
         <textarea id="details" rows="5" placeholder="z. B. genaue Situation, gewünschter Ablauf, Fristen"></textarea>
-        <button type="button" class="speech-btn" onclick="startSpeech('details')">🎤</button>
+        <button type="button" class="speech-btn" onclick="startRecognition('details')">🎤</button>
+      </div>
+
+      <div class="speech-hint">
+        🎙️ Spracheingabe funktioniert nur in Google Chrome oder Microsoft Edge.
       </div>
 
       <button id="generateBtn" type="submit">📄 Amtsschreiben generieren</button>
@@ -181,6 +231,7 @@
 
     <div id="status"></div>
     <div id="output" class="output"></div>
+
     <div id="export-buttons" style="display:none">
       <button id="downloadPdfBtn">📥 PDF herunterladen</button>
       <button id="downloadDocxBtn">📝 Word herunterladen</button>
@@ -191,124 +242,6 @@
     &copy; 2025 AlltagsBuddy – Dein smarter KI-Buddy für Behördenkram
   </footer>
 
-  <script>
-    const form = document.getElementById('formGenerator');
-    const output = document.getElementById('output');
-    const status = document.getElementById('status');
-    const exportBox = document.getElementById('export-buttons');
-    const generateBtn = document.getElementById('generateBtn');
-    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-    const downloadDocxBtn = document.getElementById('downloadDocxBtn');
-
-    let result = { brieftext: '' };
-
-    function setStatus(msg, color = '#333') {
-      status.innerText = msg;
-      status.style.color = color;
-    }
-
-    function disableAll(disabled) {
-      generateBtn.disabled = disabled;
-      downloadPdfBtn.disabled = disabled;
-      downloadDocxBtn.disabled = disabled;
-    }
-
-    function startSpeech(fieldId) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert('Dein Browser unterstützt keine Spracheingabe');
-        return;
-      }
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'de-DE';
-      recognition.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        document.getElementById(fieldId).value = text;
-      };
-      recognition.start();
-    }
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const inputData = {
-        name: document.getElementById('name').value.trim(),
-        adresse: document.getElementById('adresse').value.trim(),
-        kundennummer: document.getElementById('kundennummer').value.trim(),
-        behoerde: document.getElementById('behoerde').value.trim(),
-        anliegen: document.getElementById('anliegen').value.trim(),
-        tonfall: document.getElementById('tonfall').value,
-        details: document.getElementById('details').value.trim()
-      };
-
-      if (!inputData.name || !inputData.adresse) {
-        setStatus('⚠️ Bitte fülle mindestens Name und Adresse aus.', 'red');
-        return;
-      }
-
-      setStatus('⏳ Schreiben wird generiert...');
-      disableAll(true);
-
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inputData)
-      });
-
-      const data = await res.json();
-      if (data.error) {
-        setStatus('❌ Fehler: ' + data.error, 'red');
-        disableAll(false);
-        return;
-      }
-
-      if (!data.brieftext || data.brieftext.trim().length < 5) {
-        setStatus('⚠️ Es wurde kein brauchbares Schreiben erstellt.', 'red');
-        disableAll(false);
-        return;
-      }
-
-      result = data;
-      output.innerHTML = `<h3>Generiertes Schreiben:</h3><p>${data.brieftext.replace(/\n/g, '<br>')}</p>`;
-      setStatus('✅ Schreiben erfolgreich erstellt!', 'green');
-      exportBox.style.display = 'block';
-      disableAll(false);
-    });
-
-    downloadPdfBtn.addEventListener('click', async () => {
-      setStatus('📄 PDF wird erstellt...');
-      disableAll(true);
-      const res = await fetch('/api/export/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result)
-      });
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'amtsschreiben.pdf';
-      a.click();
-      setStatus('✅ PDF wurde heruntergeladen', 'green');
-      disableAll(false);
-    });
-
-    downloadDocxBtn.addEventListener('click', async () => {
-      setStatus('📝 Word wird erstellt...');
-      disableAll(true);
-      const res = await fetch('/api/export/docx', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result)
-      });
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'amtsschreiben.docx';
-      a.click();
-      setStatus('✅ Word-Datei wurde heruntergeladen', 'green');
-      disableAll(false);
-    });
-  </script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
