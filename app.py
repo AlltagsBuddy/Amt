@@ -8,29 +8,19 @@ import os
 import re
 from dotenv import load_dotenv
 
-# 🔐 .env laden (lokal)
+# 🔐 .env nur lokal laden
 load_dotenv()
 
-# 🌍 Flask-App einrichten
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
-# 🔐 API Keys aus Umgebungsvariablen
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # optional
 
-# 🧪 Debug-Ausgabe beim Start
-if not GOOGLE_API_KEY:
-    print("❌ GOOGLE_API_KEY wurde nicht gefunden!")
-else:
-    print("✅ GOOGLE_API_KEY ist gesetzt.")
-
-# 🌐 HTML-Frontend ausliefern
 @app.route('/')
 def serve_html():
     return render_template('amt.html')
 
-# 📍 Hole Koordinaten zur PLZ über Nominatim (OpenStreetMap)
+# 📍 Koordinaten via OpenStreetMap
 def get_coords_from_plz(plz):
     try:
         res = requests.get("https://nominatim.openstreetmap.org/search", params={
@@ -43,11 +33,10 @@ def get_coords_from_plz(plz):
         if not data:
             return None, None
         return data[0]["lat"], data[0]["lon"]
-    except Exception as e:
-        print("❌ Fehler beim Abrufen der Koordinaten:", e)
+    except:
         return None, None
 
-# 📌 Behördensuche via Google Places API
+# 📌 Google Places API – Behörde suchen
 def get_amtsadresse(plz, amt):
     if not GOOGLE_API_KEY:
         return "[Kein Google API Key verfügbar]"
@@ -72,19 +61,20 @@ def get_amtsadresse(plz, amt):
 
         if "error_message" in data:
             return f"[Google API Fehler: {data['error_message']}]"
+
         if not data.get("results"):
             return "[Keine passende Behörde gefunden]"
 
         best = data["results"][0]
         name = best.get("name", "[Unbekanntes Amt]")
         adresse = best.get("formatted_address", "")
-        maps_link = f"https://www.google.com/maps/search/?api=1&query={name.replace(' ', '+')}+{adresse.replace(' ', '+')}"
-        return f"{name}\n{adresse}\n{maps_link}"
+        maps_url = f"https://www.google.com/maps/search/?api=1&query={requests.utils.quote(adresse)}"
+        return f"{name}\n{adresse}\n{maps_url}"
 
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
 
-# 📝 Brieftext generieren
+# 📝 Schreiben generieren
 def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
     stil = {
         "neutral": "Sehr geehrte Damen und Herren,",
@@ -92,6 +82,7 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
         "formell": "Hiermit wende ich mich in förmlicher Weise an Sie."
     }.get(tonfall, "Sehr geehrte Damen und Herren,")
 
+    # PLZ extrahieren
     plz_match = re.search(r'(\d{5})', adresse)
     plz = plz_match.group(1) if plz_match else ''
     amtsadresse = get_amtsadresse(plz, behoerde)
@@ -100,7 +91,7 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
     if kundennummer:
         absenderblock += f"\nKundennummer: {kundennummer}"
 
-    brieftext = (
+    text = (
         f"{absenderblock}\n\n"
         f"An:\n{amtsadresse}\n\n"
         f"{stil}\n\n"
@@ -108,24 +99,24 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
         f"{details}\n\n"
         f"Ich danke Ihnen im Voraus für Ihre Bearbeitung.\n\nMit freundlichen Grüßen\n{name}"
     )
-    return brieftext
+    return text
 
-# 📤 Schreiben generieren – API
+# 📤 Schreiben erzeugen
 @app.route('/api/generate', methods=['POST'])
 def generate():
     data = request.get_json()
     letter = generate_letter(
-        data.get('behoerde', ''),
-        data.get('anliegen', ''),
-        data.get('tonfall', ''),
-        data.get('details', ''),
-        data.get('name', '[Dein Name]'),
-        data.get('adresse', '[Deine Adresse]'),
-        data.get('kundennummer', '')
+        data.get('behoerde', '').strip(),
+        data.get('anliegen', '').strip(),
+        data.get('tonfall', '').strip(),
+        data.get('details', '').strip(),
+        data.get('name', '[Dein Name]').strip(),
+        data.get('adresse', '[Deine Adresse]').strip(),
+        data.get('kundennummer', '').strip()
     )
     return jsonify({"brieftext": letter})
 
-# 📥 PDF Download
+# 📥 PDF Export
 @app.route('/api/export/pdf', methods=['POST'])
 def export_pdf():
     data = request.get_json()
@@ -140,7 +131,7 @@ def export_pdf():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.pdf", mimetype='application/pdf')
 
-# 📥 DOCX Download
+# 📥 DOCX Export
 @app.route('/api/export/docx', methods=['POST'])
 def export_docx():
     data = request.get_json()
@@ -152,7 +143,7 @@ def export_docx():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
-# 🔍 Diagnose-Route zur API (optional)
+# 🔍 Diagnose-Route
 @app.route('/test-api')
 def test_google_api():
     test_plz = "10115"
