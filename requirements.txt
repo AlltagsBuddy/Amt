@@ -4,3 +4,5 @@ fpdf
 requests
 python-docx
 python-dotenv==1.1.0
+openai
+
