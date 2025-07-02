@@ -8,7 +8,6 @@ import os
 import re
 from dotenv import load_dotenv
 
-# 🔐 .env nur lokal laden
 load_dotenv()
 
 app = Flask(__name__, template_folder='templates')
@@ -20,7 +19,8 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 def serve_html():
     return render_template('amt.html')
 
-# 📍 Koordinaten via OpenStreetMap
+# Koordinaten via OpenStreetMap
+
 def get_coords_from_plz(plz):
     try:
         res = requests.get("https://nominatim.openstreetmap.org/search", params={
@@ -36,7 +36,8 @@ def get_coords_from_plz(plz):
     except:
         return None, None
 
-# 📌 Google Places API – Behörde suchen
+# Google Places API
+
 def get_amtsadresse(plz, amt):
     if not GOOGLE_API_KEY:
         return "[Kein Google API Key verfügbar]"
@@ -74,21 +75,15 @@ def get_amtsadresse(plz, amt):
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
 
-# 📝 Schreiben generieren
-def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer, behoerde_custom, anliegen_custom):
+# Schreiben generieren
+
+def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
     stil = {
         "neutral": "Sehr geehrte Damen und Herren,",
         "freundlich": "Guten Tag, ich hoffe, es geht Ihnen gut.",
         "formell": "Hiermit wende ich mich in förmlicher Weise an Sie."
     }.get(tonfall, "Sehr geehrte Damen und Herren,")
 
-    # Felder bei Sonstiges überschreiben
-    if behoerde == "Sonstiges" and behoerde_custom:
-        behoerde = behoerde_custom
-    if anliegen == "Sonstiges" and anliegen_custom:
-        anliegen = anliegen_custom
-
-    # PLZ extrahieren
     plz_match = re.search(r'(\d{5})', adresse)
     plz = plz_match.group(1) if plz_match else ''
     amtsadresse = get_amtsadresse(plz, behoerde)
@@ -107,24 +102,23 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
     )
     return text
 
-# 📤 Schreiben erzeugen
 @app.route('/api/generate', methods=['POST'])
 def generate():
     data = request.get_json()
+    behoerde = data.get('behoerde_sonstig') if data.get('behoerde') == 'Sonstiges' else data.get('behoerde')
+    anliegen = data.get('anliegen_sonstig') if data.get('anliegen') == 'Sonstiges' else data.get('anliegen')
+
     letter = generate_letter(
-        data.get('behoerde', '').strip(),
-        data.get('anliegen', '').strip(),
+        behoerde.strip(),
+        anliegen.strip(),
         data.get('tonfall', '').strip(),
         data.get('details', '').strip(),
         data.get('name', '[Dein Name]').strip(),
         data.get('adresse', '[Deine Adresse]').strip(),
-        data.get('kundennummer', '').strip(),
-        data.get('behoerde_custom', '').strip(),
-        data.get('anliegen_custom', '').strip()
+        data.get('kundennummer', '').strip()
     )
     return jsonify({"brieftext": letter})
 
-# 📥 PDF Export
 @app.route('/api/export/pdf', methods=['POST'])
 def export_pdf():
     data = request.get_json()
@@ -139,7 +133,6 @@ def export_pdf():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.pdf", mimetype='application/pdf')
 
-# 📥 DOCX Export
 @app.route('/api/export/docx', methods=['POST'])
 def export_docx():
     data = request.get_json()
@@ -151,7 +144,6 @@ def export_docx():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
-# 🔍 Diagnose-Route
 @app.route('/test-api')
 def test_google_api():
     test_plz = "10115"
@@ -167,7 +159,6 @@ def test_google_api():
     except Exception as e:
         return jsonify({"status": "Fehler", "meldung": str(e)}), 500
 
-# 🚀 Start
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
