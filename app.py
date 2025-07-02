@@ -7,20 +7,26 @@ import requests
 import os
 import re
 from dotenv import load_dotenv
+import openai
 
-# 🔐 .env nur lokal laden
+# 🔐 .env laden (lokal)
 load_dotenv()
 
+# 🌍 Flask-App einrichten
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
+# 🔐 API Keys aus Umgebungsvariablen
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = OPENAI_API_KEY
 
 @app.route('/')
 def serve_html():
     return render_template('amt.html')
 
-# 📍 Koordinaten via OpenStreetMap
+# 📍 Koordinaten abrufen
+
 def get_coords_from_plz(plz):
     try:
         res = requests.get("https://nominatim.openstreetmap.org/search", params={
@@ -36,7 +42,8 @@ def get_coords_from_plz(plz):
     except:
         return None, None
 
-# 📌 Google Places API – Behörde suchen
+# 📌 Google Places API verwenden
+
 def get_amtsadresse(plz, amt):
     if not GOOGLE_API_KEY:
         return "[Kein Google API Key verfügbar]"
@@ -61,20 +68,20 @@ def get_amtsadresse(plz, amt):
 
         if "error_message" in data:
             return f"[Google API Fehler: {data['error_message']}]"
-
         if not data.get("results"):
             return "[Keine passende Behörde gefunden]"
 
         best = data["results"][0]
         name = best.get("name", "[Unbekanntes Amt]")
         adresse = best.get("formatted_address", "")
-        maps_url = f"https://www.google.com/maps/search/?api=1&query={requests.utils.quote(adresse)}"
-        return f"{name}\n{adresse}\n{maps_url}"
+        maps_link = f"https://www.google.com/maps/search/?api=1&query={adresse.replace(' ', '+')}"
+        return f"{name}\n{adresse}\n{maps_link}"
 
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
 
 # 📝 Schreiben generieren
+
 def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
     stil = {
         "neutral": "Sehr geehrte Damen und Herren,",
@@ -82,7 +89,6 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
         "formell": "Hiermit wende ich mich in förmlicher Weise an Sie."
     }.get(tonfall, "Sehr geehrte Damen und Herren,")
 
-    # PLZ extrahieren
     plz_match = re.search(r'(\d{5})', adresse)
     plz = plz_match.group(1) if plz_match else ''
     amtsadresse = get_amtsadresse(plz, behoerde)
@@ -101,22 +107,24 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
     )
     return text
 
-# 📤 Schreiben erzeugen
+# 📤 Schreiben generieren
+
 @app.route('/api/generate', methods=['POST'])
 def generate():
     data = request.get_json()
     letter = generate_letter(
-        data.get('behoerde', '').strip(),
-        data.get('anliegen', '').strip(),
-        data.get('tonfall', '').strip(),
-        data.get('details', '').strip(),
-        data.get('name', '[Dein Name]').strip(),
-        data.get('adresse', '[Deine Adresse]').strip(),
-        data.get('kundennummer', '').strip()
+        data.get('behoerde', ''),
+        data.get('anliegen', ''),
+        data.get('tonfall', ''),
+        data.get('details', ''),
+        data.get('name', '[Dein Name]'),
+        data.get('adresse', '[Deine Adresse]'),
+        data.get('kundennummer', '')
     )
     return jsonify({"brieftext": letter})
 
 # 📥 PDF Export
+
 @app.route('/api/export/pdf', methods=['POST'])
 def export_pdf():
     data = request.get_json()
@@ -132,6 +140,7 @@ def export_pdf():
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.pdf", mimetype='application/pdf')
 
 # 📥 DOCX Export
+
 @app.route('/api/export/docx', methods=['POST'])
 def export_docx():
     data = request.get_json()
@@ -143,23 +152,31 @@ def export_docx():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
-# 🔍 Diagnose-Route
+# 🎤 Sprachtranskription via Whisper
+@app.route('/api/transcribe', methods=['POST'])
+def transcribe_audio():
+    if 'audio' not in request.files:
+        return jsonify({'error': 'Keine Audiodatei hochgeladen'}), 400
+
+    audio_file = request.files['audio']
+    try:
+        transcript = openai.Audio.transcribe("whisper-1", audio_file)
+        return jsonify({'text': transcript['text']})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# 🧪 Diagnose-Route
 @app.route('/test-api')
 def test_google_api():
     test_plz = "10115"
     test_behoerde = "Bürgeramt"
     try:
         ergebnis = get_amtsadresse(test_plz, test_behoerde)
-        return jsonify({
-            "status": "OK",
-            "plz": test_plz,
-            "behoerde": test_behoerde,
-            "adresse": ergebnis
-        })
+        return jsonify({"status": "OK", "adresse": ergebnis})
     except Exception as e:
         return jsonify({"status": "Fehler", "meldung": str(e)}), 500
 
-# 🚀 Start
+# 🚀 Starten
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(debug=True, host='0.0.0.0', port=port)
