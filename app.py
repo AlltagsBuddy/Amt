@@ -6,16 +6,19 @@ from fpdf import FPDF
 import requests
 import os
 import re
+from dotenv import load_dotenv  # <-- NEU
 
-# Initialisierung (NUR EINMAL!)
+# === .env laden ===
+load_dotenv()
+
+# === Initialisierung ===
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
-# Optional: OpenAI API Key (falls noch genutzt)
-# openai.api_key = os.getenv("OPENAI_API_KEY")
-
-# Dein echter Google Maps API Key
-GOOGLE_API_KEY = "AIzaSyC1Gg9ssxPiPIePY0M3MT_BxOjzyjHQ3zQ"
+# === API Key sicher aus .env holen ===
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+# OPENAI API Key
+openaiapi_key = os.getenv("OPENAI_API_KEY")  
 
 @app.route('/')
 def serve_html():
@@ -66,30 +69,49 @@ def get_amtsadresse(plz, amt):
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
 
+# === Briefgenerator ===
+
 def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
-    stil = {
+    anreden = {
         "neutral": "Sehr geehrte Damen und Herren,",
         "freundlich": "Guten Tag, ich hoffe, es geht Ihnen gut.",
         "formell": "Hiermit wende ich mich in förmlicher Weise an Sie."
-    }.get(tonfall, "Sehr geehrte Damen und Herren,")
+    }
+    anrede = anreden.get(tonfall, "Sehr geehrte Damen und Herren,")
 
-    plz_match = re.search(r'(\d{5})', adresse)
-    plz = plz_match.group(1) if plz_match else ''
+    plz_match = re.search(r'\b\d{5}\b', adresse)
+    plz = plz_match.group(0) if plz_match else ''
     amtsadresse = get_amtsadresse(plz, behoerde)
 
-    absenderblock = f"{name}\n{adresse}\n"
-    if kundennummer:
-        absenderblock += f"Kundennummer: {kundennummer}\n"
+    absenderblock = f"{name}\n{adresse}"
+    if kundennummer.strip():
+        absenderblock += f"\nKundennummer: {kundennummer.strip()}"
 
-    text = (
-        f"{absenderblock}\n"
-        f"An:\n{amtsadresse}\n\n"
-        f"{stil}\n\n"
-        f"Ich möchte mich mit folgendem Anliegen an das {behoerde} wenden: {anliegen}.\n\n"
-        f"{details}\n\n"
-        f"Ich danke Ihnen im Voraus für Ihre Bearbeitung.\n\nMit freundlichen Grüßen\n{name}"
+    einleitung = (
+        f"{anrede}\n\n"
+        f"ich wende mich an Sie mit folgendem Anliegen in Bezug auf das {behoerde}:\n"
+        f"{anliegen}.\n"
     )
-    return text
+
+    hauptteil = (
+        f"{details.strip()}\n\n"
+        f"Ich bitte um eine wohlwollende Prüfung und eine Rückmeldung an mich unter den oben genannten Kontaktdaten."
+    )
+
+    schluss = (
+        "\n\nVielen Dank für Ihre Mühe.\n\n"
+        f"Mit freundlichen Grüßen\n\n{name}"
+    )
+
+    brief = (
+        f"{absenderblock}\n\n"
+        f"An:\n{amtsadresse}\n\n"
+        f"{einleitung}"
+        f"{hauptteil}"
+        f"{schluss}"
+    )
+
+    return brief
 
 # === API-Routen ===
 
