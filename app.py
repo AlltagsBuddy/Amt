@@ -15,7 +15,6 @@ app = Flask(__name__, template_folder='templates')
 CORS(app)
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 @app.route('/')
 def serve_html():
@@ -113,9 +112,9 @@ def generate():
     data = request.get_json()
     letter = generate_letter(
         data.get('behoerde', ''),
-        data.get('sonstige_behoerde', ''),
+        data.get('behoerde_sonstig', ''),
         data.get('anliegen', ''),
-        data.get('sonstiges_anliegen', ''),
+        data.get('anliegen_sonstig', ''),
         data.get('tonfall', ''),
         data.get('details', ''),
         data.get('name', '[Dein Name]'),
