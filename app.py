@@ -21,162 +21,71 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
-@app.route('/')
-def serve_html():
-    return render_template('amt.html')
+app = Flask(__name__)
 
-# 📍 Koordinaten abrufen
 
-def get_coords_from_plz(plz):
-    try:
-        res = requests.get("https://nominatim.openstreetmap.org/search", params={
-            "postalcode": plz,
-            "country": "Germany",
-            "format": "json",
-            "limit": 1
-        }, headers={"User-Agent": "AlltagsBuddy Amt-o-Mat"})
-        data = res.json()
-        if not data:
-            return None, None
-        return data[0]["lat"], data[0]["lon"]
-    except:
-        return None, None
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-# 📌 Google Places API verwenden
-
-def get_amtsadresse(plz, amt):
-    if not GOOGLE_API_KEY:
-        return "[Kein Google API Key verfügbar]"
-
-    lat, lon = get_coords_from_plz(plz)
-    if not lat or not lon:
-        return "[Ort zur PLZ nicht gefunden]"
-
-    try:
-        suchbegriff = f"{amt} {plz} Germany"
-        url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
-        params = {
-            "query": suchbegriff,
-            "location": f"{lat},{lon}",
-            "radius": 50000,
-            "region": "de",
-            "language": "de",
-            "key": GOOGLE_API_KEY
-        }
-        res = requests.get(url, params=params)
-        data = res.json()
-
-        if "error_message" in data:
-            return f"[Google API Fehler: {data['error_message']}]"
-        if not data.get("results"):
-            return "[Keine passende Behörde gefunden]"
-
-        best = data["results"][0]
-        name = best.get("name", "[Unbekanntes Amt]")
-        adresse = best.get("formatted_address", "")
-        maps_link = f"https://www.google.com/maps/search/?api=1&query={adresse.replace(' ', '+')}"
-        return f"{name}\n{adresse}\n{maps_link}"
-
-    except Exception as e:
-        return f"[Fehler bei der Google-Suche: {str(e)}]"
-
-# 📝 Schreiben generieren
-
-def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
-    stil = {
-        "neutral": "Sehr geehrte Damen und Herren,",
-        "freundlich": "Guten Tag, ich hoffe, es geht Ihnen gut.",
-        "formell": "Hiermit wende ich mich in förmlicher Weise an Sie."
-    }.get(tonfall, "Sehr geehrte Damen und Herren,")
-
-    plz_match = re.search(r'(\d{5})', adresse)
-    plz = plz_match.group(1) if plz_match else ''
-    amtsadresse = get_amtsadresse(plz, behoerde)
-
-    absenderblock = f"{name}\n{adresse}"
-    if kundennummer:
-        absenderblock += f"\nKundennummer: {kundennummer}"
-
-    text = (
-        f"{absenderblock}\n\n"
-        f"An:\n{amtsadresse}\n\n"
-        f"{stil}\n\n"
-        f"Ich möchte mich mit folgendem Anliegen an das {behoerde} wenden: {anliegen}.\n\n"
-        f"{details}\n\n"
-        f"Ich danke Ihnen im Voraus für Ihre Bearbeitung.\n\nMit freundlichen Grüßen\n{name}"
-    )
-    return text
-
-# 📤 Schreiben generieren
-
-@app.route('/api/generate', methods=['POST'])
+@app.route("/generate", methods=["POST"])
 def generate():
-    data = request.get_json()
-    letter = generate_letter(
-        data.get('behoerde', ''),
-        data.get('anliegen', ''),
-        data.get('tonfall', ''),
-        data.get('details', ''),
-        data.get('name', '[Dein Name]'),
-        data.get('adresse', '[Deine Adresse]'),
-        data.get('kundennummer', '')
-    )
-    return jsonify({"brieftext": letter})
+    data = request.json
 
-# 📥 PDF Export
+    name = data.get("name", "")
+    adresse = data.get("adresse", "")
+    kundennummer = data.get("kundennummer", "")
+    behoerde = data.get("behoerde", "")
+    behoerde_sonstig = data.get("behoerdeSonstig", "")
+    anliegen = data.get("anliegen", "")
+    anliegen_sonstig = data.get("anliegenSonstig", "")
+    tonfall = data.get("tonfall", "neutral")
+    details = data.get("details", "")
 
-@app.route('/api/export/pdf', methods=['POST'])
-def export_pdf():
-    data = request.get_json()
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Arial", size=12)
-    for line in data.get("brieftext", "").split("\n"):
-        pdf.multi_cell(0, 10, line)
-    buffer = BytesIO()
-    pdf.output(buffer)
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name="amtsschreiben.pdf", mimetype='application/pdf')
+    # Fallback auf "Sonstiges"-Felder
+    behoerde_final = behoerde_sonstig if behoerde == "Sonstiges" else behoerde
+    anliegen_final = anliegen_sonstig if anliegen == "Sonstiges" else anliegen
 
-# 📥 DOCX Export
+    # Beispielhafte Behördenadresse (hier später durch Lookup ersetzen)
+    behoerden_adressen = {
+        "Jobcenter": "Jobcenter Musterstadt\nHauptstraße 1\n12345 Musterstadt",
+        "Bürgeramt": "Bürgeramt Musterstadt\nAm Rathaus 2\n12345 Musterstadt",
+        "Agentur für Arbeit": "Agentur für Arbeit Musterstadt\nArbeitsweg 4\n12345 Musterstadt",
+        "Familienkasse": "Familienkasse Musterstadt\nKinderweg 7\n12345 Musterstadt",
+        "Stadtverwaltung": "Stadtverwaltung Musterstadt\nVerwaltungsplatz 8\n12345 Musterstadt"
+    }
 
-@app.route('/api/export/docx', methods=['POST'])
-def export_docx():
-    data = request.get_json()
-    doc = Document()
-    for line in data.get("brieftext", "").split("\n"):
-        doc.add_paragraph(line)
-    buffer = BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    behoerde_adresse = behoerden_adressen.get(behoerde_final, behoerde_final)
 
-# 🎤 Sprachtranskription via Whisper
-@app.route('/api/transcribe', methods=['POST'])
-def transcribe_audio():
-    if 'audio' not in request.files:
-        return jsonify({'error': 'Keine Audiodatei hochgeladen'}), 400
+    # Prompt vorbereiten
+    prompt = f"""
+    Erstelle ein offizielles, gut lesbares und verständliches Schreiben an folgende Behörde:
+    {behoerde_adresse}
 
-    audio_file = request.files['audio']
+    Art des Schreibens: {anliegen_final}
+    Tonfall: {tonfall}
+    Absender: {name}, {adresse}
+    {"Kundennummer: " + kundennummer if kundennummer else ""}
+    Details zum Anliegen: {details}
+
+    Beginne mit einer passenden Anrede, formuliere den Text gemäß deutschem Behördenstil und schließe mit einem höflichen Abschluss und vollständiger Absenderangabe.
+    """
+
     try:
-        transcript = openai.Audio.transcribe("whisper-1", audio_file)
-        return jsonify({'text': transcript['text']})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.6,
+            max_tokens=800
+        )
+        output_text = response['choices'][0]['message']['content']
+        return jsonify({
+            "output": output_text,
+            "behoerdeAdresse": behoerde_adresse
+        })
 
-# 🧪 Diagnose-Route
-@app.route('/test-api')
-def test_google_api():
-    test_plz = "10115"
-    test_behoerde = "Bürgeramt"
-    try:
-        ergebnis = get_amtsadresse(test_plz, test_behoerde)
-        return jsonify({"status": "OK", "adresse": ergebnis})
     except Exception as e:
-        return jsonify({"status": "Fehler", "meldung": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-# 🚀 Starten
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+if __name__ == "__main__":
+    app.run(debug=True)
