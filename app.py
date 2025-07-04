@@ -6,7 +6,7 @@ from fpdf import FPDF
 import requests
 import os
 import re
-from dotenv import load_dotenv  # <-- NEU
+from dotenv import load_dotenv
 
 # === .env laden ===
 load_dotenv()
@@ -15,7 +15,7 @@ load_dotenv()
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
-# === API Key sicher aus .env holen ===
+# === API Key laden ===
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 # OPENAI API Key
 openaiapi_key = os.getenv("OPENAI_API_KEY")  
@@ -42,6 +42,9 @@ def get_coords_from_plz(plz):
         return None, None
 
 def get_amtsadresse(plz, amt):
+    if not GOOGLE_API_KEY:
+        return "[Fehler: Kein Google API Key gefunden]"
+
     lat, lon = get_coords_from_plz(plz)
     if not lat or not lon:
         return "[Ort zur PLZ nicht gefunden]"
@@ -69,9 +72,12 @@ def get_amtsadresse(plz, amt):
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
 
-# === Briefgenerator ===
+# === Briefgenerator – robust formuliert ===
 
 def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
+    if not all([behoerde, anliegen, tonfall, name, adresse]):
+        return "[Fehler: Unvollständige Eingaben]"
+
     anreden = {
         "neutral": "Sehr geehrte Damen und Herren,",
         "freundlich": "Guten Tag, ich hoffe, es geht Ihnen gut.",
@@ -84,30 +90,27 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
     amtsadresse = get_amtsadresse(plz, behoerde)
 
     absenderblock = f"{name}\n{adresse}"
-    if kundennummer.strip():
+    if kundennummer.strip() and kundennummer != "-":
         absenderblock += f"\nKundennummer: {kundennummer.strip()}"
 
     einleitung = (
         f"{anrede}\n\n"
-        f"ich wende mich an Sie mit folgendem Anliegen in Bezug auf das {behoerde}:\n"
+        f"ich wende mich an Sie mit folgendem Anliegen im Zusammenhang mit dem {behoerde}:\n"
         f"{anliegen}.\n"
     )
 
-    hauptteil = (
-        f"{details.strip()}\n\n"
-        f"Ich bitte um eine wohlwollende Prüfung und eine Rückmeldung an mich unter den oben genannten Kontaktdaten."
-    )
+    hauptteil = details.strip() if details.strip() else "Ich bitte Sie um Unterstützung bei diesem Anliegen."
 
     schluss = (
-        "\n\nVielen Dank für Ihre Mühe.\n\n"
+        "\n\nIch danke Ihnen für Ihre Mühe und bitte um eine Rückmeldung.\n\n"
         f"Mit freundlichen Grüßen\n\n{name}"
     )
 
     brief = (
         f"{absenderblock}\n\n"
         f"An:\n{amtsadresse}\n\n"
-        f"{einleitung}"
-        f"{hauptteil}"
+        f"{einleitung}\n"
+        f"{hauptteil}\n"
         f"{schluss}"
     )
 
@@ -117,17 +120,22 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
 
 @app.route('/api/generate', methods=['POST'])
 def generate():
-    data = request.get_json()
-    letter = generate_letter(
-        data.get('behoerde', ''),
-        data.get('anliegen', ''),
-        data.get('tonfall', ''),
-        data.get('details', ''),
-        data.get('name', '[Dein Name]'),
-        data.get('adresse', '[Deine Adresse]'),
-        data.get('kundennummer', '-')
-    )
-    return jsonify({"brieftext": letter})
+    try:
+        data = request.get_json()
+
+        letter = generate_letter(
+            behoerde=data.get('behoerde', '').strip(),
+            anliegen=data.get('anliegen', '').strip(),
+            tonfall=data.get('tonfall', '').strip(),
+            details=data.get('details', '').strip(),
+            name=data.get('name', '[Dein Name]').strip(),
+            adresse=data.get('adresse', '[Deine Adresse]').strip(),
+            kundennummer=data.get('kundennummer', '').strip()
+        )
+
+        return jsonify({"brieftext": letter})
+    except Exception as e:
+        return jsonify({"brieftext": f"[Fehler beim Generieren des Schreibens: {str(e)}]"}), 500
 
 @app.route('/api/export/pdf', methods=['POST'])
 def export_pdf():
