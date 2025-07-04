@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file, render_template
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from io import BytesIO
 from docx import Document
@@ -9,6 +9,12 @@ import re
 from math import radians, cos, sin, asin, sqrt
 
 import os
+
+import openai
+import os
+
+app = Flask(__name__)  # <- DAS DARF NICHT FEHLEN
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
@@ -136,6 +142,9 @@ def export_docx():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
 
     
     
