@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
 from io import BytesIO
 from docx import Document
@@ -6,31 +6,22 @@ from fpdf import FPDF
 import requests
 import os
 import re
-from math import radians, cos, sin, asin, sqrt
 
-import os
-
-import openai
-import os
-
-app = Flask(__name__)  # <- DAS DARF NICHT FEHLEN
-
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
-
-
+# Initialisierung (NUR EINMAL!)
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
-GOOGLE_API_KEY = "AIzaSyC1Gg9ssxPiPIePY0M3MT_BxOjzyjHQ3zQ"  # Ersetze durch deinen echten API Key
+# Optional: OpenAI API Key (falls noch genutzt)
+# openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# Dein echter Google Maps API Key
+GOOGLE_API_KEY = "AIzaSyC1Gg9ssxPiPIePY0M3MT_BxOjzyjHQ3zQ"
 
 @app.route('/')
 def serve_html():
     return render_template('amt.html')
 
-# 📍 Hole Koordinaten zur PLZ
+# === Hilfsfunktionen ===
 
 def get_coords_from_plz(plz):
     try:
@@ -46,8 +37,6 @@ def get_coords_from_plz(plz):
         return data[0]["lat"], data[0]["lon"]
     except:
         return None, None
-
-# 📌 Google Places Suche nach nächstem Amt
 
 def get_amtsadresse(plz, amt):
     lat, lon = get_coords_from_plz(plz)
@@ -77,8 +66,6 @@ def get_amtsadresse(plz, amt):
     except Exception as e:
         return f"[Fehler bei der Google-Suche: {str(e)}]"
 
-# 📝 Schreiben generieren
-
 def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundennummer):
     stil = {
         "neutral": "Sehr geehrte Damen und Herren,",
@@ -88,13 +75,14 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
 
     plz_match = re.search(r'(\d{5})', adresse)
     plz = plz_match.group(1) if plz_match else ''
-
     amtsadresse = get_amtsadresse(plz, behoerde)
 
-    absenderblock = f"{name}\n{adresse}\nKundennummer: {kundennummer}\n"
+    absenderblock = f"{name}\n{adresse}\n"
+    if kundennummer:
+        absenderblock += f"Kundennummer: {kundennummer}\n"
 
     text = (
-        f"{absenderblock}\n\n"
+        f"{absenderblock}\n"
         f"An:\n{amtsadresse}\n\n"
         f"{stil}\n\n"
         f"Ich möchte mich mit folgendem Anliegen an das {behoerde} wenden: {anliegen}.\n\n"
@@ -102,6 +90,8 @@ def generate_letter(behoerde, anliegen, tonfall, details, name, adresse, kundenn
         f"Ich danke Ihnen im Voraus für Ihre Bearbeitung.\n\nMit freundlichen Grüßen\n{name}"
     )
     return text
+
+# === API-Routen ===
 
 @app.route('/api/generate', methods=['POST'])
 def generate():
@@ -142,9 +132,7 @@ def export_docx():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.docx", mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
+# === Start ===
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host="0.0.0.0", port=port)
-
-    
-    
