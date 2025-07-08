@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Amt-O-Mat | AlltagsBuddy</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    header {
+      background-color: #ffffff;
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo img {
+      height: 60px;
+    }
+    .logo span {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #1BC7C2;
+    }
+    .cta-button {
+      background-color: #FF6B00;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    main {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #FF6B00;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .input-group input[type="text"],
+    .input-group textarea,
+    .input-group select {
+      flex: 1;
+    }
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      background-color: #FF6B00;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .output {
+      margin-top: 30px;
+      background-color: #f4f4f4;
+      padding: 20px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+    #status {
+      margin-top: 15px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .speech-btn {
+      padding: 6px;
+      font-size: 0.8rem;
+      height: 38px;
+      width: 38px;
+      min-width: 38px;
+      max-width: 38px;
+      border-radius: 50%;
+      background-color: #1BC7C2;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .speech-btn:hover {
+      background-color: #19b3af;
+    }
+    .speech-hint {
+      font-size: 0.85rem;
+      text-align: center;
+      margin-top: 10px;
+      color: #888;
+    }
+    footer {
+      text-align: center;
+      padding: 30px;
+      background-color: #1BC7C2;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="AlltagsBuddy Logo" />
+      <span>AlltagsBuddy</span>
+    </div>
+    <a href="index.html" class="cta-button">Zurück zur Startseite</a>
+  </header>
+
+  <main>
+    <h1>Amt-O-Mat – Der KI-Formulargenerator</h1>
+    <p style="text-align:center">
+      Erstelle automatisch offizielle Schreiben für dein Anliegen bei Ämtern & Behörden. Wähle einfach Behörde, Anlass, Tonfall und gib deine Daten ein.
+    </p>
+
+    <form id="formGenerator">
+      <label for="name">Dein Name</label>
+      <div class="input-group">
+        <input type="text" id="name" placeholder="Max Mustermann" />
+        <button type="button" class="speech-btn" onclick="startRecognition('name')">🎤</button>
+      </div>
+
+      <label for="adresse">Deine Adresse</label>
+      <div class="input-group">
+        <textarea id="adresse" rows="2" placeholder="Musterstraße 1, 12345 Musterstadt"></textarea>
+        <button type="button" class="speech-btn" onclick="startRecognition('adresse')">🎤</button>
+      </div>
+
+      <label for="kundennummer">Kundennummer (optional)</label>
+      <div class="input-group">
+        <input type="text" id="kundennummer" />
+        <button type="button" class="speech-btn" onclick="startRecognition('kundennummer')">🎤</button>
+      </div>
+
+      <label for="behoerde">Behörde</label>
+      <div class="input-group">
+        <select id="behoerde" onchange="toggleSonstiges('behoerde')">
+          <option>Jobcenter</option>
+          <option>Bürgeramt</option>
+          <option>Agentur für Arbeit</option>
+          <option>Familienkasse</option>
+          <option>Stadtverwaltung</option>
+          <option value="Sonstiges">Sonstiges</option>
+        </select>
+        <button type="button" class="speech-btn" onclick="startRecognition('behoerde')">🎤</button>
+      </div>
+      <div id="behoerde-sonstig" style="display:none">
+        <input type="text" id="behoerde-sonstig-input" placeholder="Manuelle Eingabe der Behörde" />
+        <button type="button" class="speech-btn" onclick="startRecognition('behoerde-sonstig-input')">🎤</button>
+      </div>
+
+      <label for="anliegen">Anliegen</label>
+      <div class="input-group">
+        <select id="anliegen" onchange="toggleSonstiges('anliegen')">
+          <option>Widerspruch</option>
+          <option>Antrag stellen</option>
+          <option>Nachweise senden</option>
+          <option>Kündigung</option>
+          <option>Rückmeldung / Nachfrage</option>
+          <option value="Sonstiges">Sonstiges</option>
+        </select>
+        <button type="button" class="speech-btn" onclick="startRecognition('anliegen')">🎤</button>
+      </div>
+      <div id="anliegen-sonstig" style="display:none">
+        <input type="text" id="anliegen-sonstig-input" placeholder="Manuelle Eingabe des Anliegens" />
+        <button type="button" class="speech-btn" onclick="startRecognition('anliegen-sonstig-input')">🎤</button>
+      </div>
+
+      <label for="tonfall">Tonfall</label>
+      <div class="input-group">
+        <select id="tonfall">
+          <option value="neutral">Neutral</option>
+          <option value="freundlich">Freundlich-bestimmt</option>
+          <option value="formell">Förmlich</option>
+        </select>
+        <button type="button" class="speech-btn" onclick="startRecognition('tonfall')">🎤</button>
+      </div>
+
+      <label for="details">Zusätzliche Angaben</label>
+      <div class="input-group">
+        <textarea id="details" rows="5" placeholder="z. B. genaue Situation, gewünschter Ablauf, Fristen"></textarea>
+        <button type="button" class="speech-btn" onclick="startRecognition('details')">🎤</button>
+      </div>
+
+      <div class="speech-hint">
+        🎙️ Spracheingabe funktioniert nur in Google Chrome oder Microsoft Edge.
+      </div>
+
+      <button id="generateBtn" type="submit">📄 Amtsschreiben generieren</button>
+    </form>
+
+    <div id="status"></div>
+    <div id="output" class="output"></div>
+
+    <div id="export-buttons" style="display:none">
+      <button id="downloadPdfBtn">📥 PDF herunterladen</button>
+      <button id="downloadDocxBtn">📝 Word herunterladen</button>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 AlltagsBuddy – Dein smarter KI-Buddy für Behördenkram
+  </footer>
+
+  <script>
+    function toggleSonstiges(feld) {
+      document.getElementById(`${feld}-sonstig`).style.display = (document.getElementById(feld).value === 'Sonstiges') ? 'block' : 'none';
+    }
+
+    function startRecognition(id) {
+      const input = document.getElementById(id);
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'de-DE';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = event => {
+        input.value = event.results[0][0].transcript;
+      };
+      recognition.start();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('formGenerator');
+      const output = document.getElementById('output');
+      const status = document.getElementById('status');
+      const exportButtons = document.getElementById('export-buttons');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value.trim();
+        const adresse = document.getElementById('adresse').value.trim();
+        const kundennummer = document.getElementById('kundennummer').value.trim();
+
+        let behoerde = document.getElementById('behoerde').value;
+        const behoerdeSonstig = document.getElementById('behoerde-sonstig-input')?.value.trim();
+        if (behoerde === 'Sonstiges' && behoerdeSonstig) behoerde = behoerdeSonstig;
+
+        let anliegen = document.getElementById('anliegen').value;
+        const anliegenSonstig = document.getElementById('anliegen-sonstig-input')?.value.trim();
+        if (anliegen === 'Sonstiges' && anliegenSonstig) anliegen = anliegenSonstig;
+
+        const tonfall = document.getElementById('tonfall').value;
+        const details = document.getElementById('details').value.trim();
+
+        status.textContent = '⏳ Schreiben wird generiert...';
+        output.textContent = '';
+        exportButtons.style.display = 'none';
+
+        try {
+          const res = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name,
+              adresse,
+              kundennummer,
+              behoerde,
+              anliegen,
+              tonfall,
+              details
+            })
+          });
+
+          const data = await res.json();
+
+          if (data.brieftext) {
+            output.textContent = data.brieftext;
+            status.textContent = '✅ Schreiben erfolgreich generiert.';
+            exportButtons.style.display = 'block';
+          } else {
+            status.textContent = '⚠️ Keine Antwort erhalten.';
+          }
+        } catch (error) {
+          status.textContent = '❌ Fehler beim Generieren.';
+          console.error(error);
+        }
+      });
+
+      document.getElementById('downloadPdfBtn').addEventListener('click', async () => {
+        const brieftext = output.textContent;
+        const res = await fetch('/api/export/pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brieftext })
+        });
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'amtsschreiben.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('downloadDocxBtn').addEventListener('click', async () => {
+        const brieftext = output.textContent;
+        const res = await fetch('/api/export/docx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brieftext })
+        });
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'amtsschreiben.docx';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    });
+  </script>
+</body>
+</html>
