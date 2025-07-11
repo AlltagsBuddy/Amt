@@ -139,11 +139,10 @@ def export_pdf():
     for line in data.get("brieftext", "").split("\n"):
         pdf.multi_cell(0, 10, line)
     buffer = BytesIO()
-    pdf_output = pdf.output(dest='S').encode('latin-1')  # PDF als String → Bytes
+    pdf_output = pdf.output(dest='S').encode('latin-1')
     buffer.write(pdf_output)
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name="amtsschreiben.pdf", mimetype='application/pdf')
-
 
 # === API: DOCX-Export ===
 @app.route('/api/export/docx', methods=['POST'])

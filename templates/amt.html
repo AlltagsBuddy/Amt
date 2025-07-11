@@ -350,6 +350,21 @@
         URL.revokeObjectURL(url);
       });
     });
+
+    // Ergänze am Ende von <script>
+document.addEventListener('DOMContentLoaded', () => {
+  // ... bestehender Code ...
+
+  // Browserkompatibilität prüfen
+  const speechSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+  if (!speechSupported) {
+    const warningBox = document.getElementById('speech-warning');
+    if (warningBox) warningBox.style.display = 'block';
+  }
+
+  // ... bestehender Code ...
+});
+
   </script>
 </body>
 </html>
